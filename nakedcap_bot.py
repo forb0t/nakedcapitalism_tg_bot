@@ -249,7 +249,7 @@ class NakedCapBot:
 def main():
     """Основная функция"""
     # Замените на ваш токен бота
-    BOT_TOKEN = "8114291381:AAFo7jRmm3vD_7o4Cthq8Q9pD31x3_qZWMU"
+    BOT_TOKEN = ""
     
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
         print("❌ ОШИБКА: Необходимо указать токен бота!")
