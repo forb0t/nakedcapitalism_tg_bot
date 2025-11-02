@@ -171,17 +171,35 @@ class NakedCapitalismMonitor:
         
         return new_articles
     
-    def get_latest_articles(self, limit=10):
-        """Получение последних статей из базы данных"""
+    def get_latest_articles(self, limit=10, offset=0):
+        """Получение последних статей из базы данных с поддержкой пагинации"""
         cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT title, url, author, date_posted, created_at
-            FROM articles
-            ORDER BY created_at DESC
-            LIMIT ?
-        ''', (limit,))
+        # Проверяем, существует ли колонка telegraph_url
+        cursor.execute("PRAGMA table_info(articles)")
+        columns = [column[1] for column in cursor.fetchall()]
+        
+        if 'telegraph_url' in columns:
+            cursor.execute('''
+                SELECT title, url, author, date_posted, created_at, telegraph_url
+                FROM articles
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (limit, offset))
+        else:
+            cursor.execute('''
+                SELECT title, url, author, date_posted, created_at, NULL as telegraph_url
+                FROM articles
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (limit, offset))
         
         return cursor.fetchall()
+    
+    def get_total_articles_count(self):
+        """Получение общего количества статей"""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM articles")
+        return cursor.fetchone()[0]
     
     def run_monitoring(self, interval_hours=1):
         """Запуск мониторинга с заданным интервалом"""
