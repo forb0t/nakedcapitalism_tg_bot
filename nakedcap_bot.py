@@ -45,6 +45,30 @@ class NakedCapBot:
     def _back_keyboard(self) -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Назад", callback_data="back_to_menu")]])
 
+    def _pagination_keyboard(self, current_page: int, total_pages: int, callback_prefix: str) -> InlineKeyboardMarkup:
+        """Создает клавиатуру с кнопками пагинации."""
+        buttons = []
+        nav_buttons = []
+        
+        # Кнопка "Назад" (предыдущая страница)
+        if current_page > 0:
+            nav_buttons.append(InlineKeyboardButton("◀️ Назад", callback_data=f"{callback_prefix}{current_page - 1}"))
+        
+        # Индикатор страницы
+        nav_buttons.append(InlineKeyboardButton(f"{current_page + 1}/{total_pages}", callback_data="page_info"))
+        
+        # Кнопка "Вперед" (следующая страница)
+        if current_page < total_pages - 1:
+            nav_buttons.append(InlineKeyboardButton("Вперед ▶️", callback_data=f"{callback_prefix}{current_page + 1}"))
+        
+        if nav_buttons:
+            buttons.append(nav_buttons)
+        
+        # Кнопка "Назад в меню"
+        buttons.append([InlineKeyboardButton("⬅️ Назад в меню", callback_data="back_to_menu")])
+        
+        return InlineKeyboardMarkup(buttons)
+
     @staticmethod
     def _search_help_text() -> str:
         return (
@@ -167,25 +191,50 @@ class NakedCapBot:
                 reply_markup=self._back_keyboard(),
             )
 
-    async def latest_articles(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def latest_articles(self, update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 0) -> None:
+        """Показ последних статей с пагинацией."""
         try:
-            latest = self.monitor.get_latest_articles(10)
+            articles_per_page = 10
+            offset = page * articles_per_page
+            
+            # Получаем статьи для текущей страницы
+            latest = self.monitor.get_latest_articles(limit=articles_per_page, offset=offset)
+            
+            # Получаем общее количество статей
+            total_articles = self.monitor.get_total_articles_count()
+            total_pages = (total_articles + articles_per_page - 1) // articles_per_page if total_articles > 0 else 1
 
             if latest:
-                response_lines = ["📚 Последние статьи:", ""]
-                for idx, article in enumerate(latest, 1):
+                # Нумерация статей на странице
+                start_num = offset + 1
+                response_lines = [f"📚 Последние статьи (Страница {page + 1} из {total_pages}):", ""]
+                
+                for idx, article in enumerate(latest):
+                    article_num = start_num + idx
                     title, url, author, date_posted = article[:4]
-                    response_lines.append(f"{idx}. 📰 [{title}]({url})")
+                    response_lines.append(f"{article_num}. 📰 [{title}]({url})")
                     response_lines.append(f"   👤 {author} | 📅 {date_posted}")
                     response_lines.append("")
 
-                await self._reply_or_send(
-                    update,
-                    "\n".join(response_lines).strip(),
-                    parse_mode="Markdown",
-                    disable_web_page_preview=True,
-                    reply_markup=self._back_keyboard(),
-                )
+                # Создаем клавиатуру с навигацией
+                keyboard = self._pagination_keyboard(page, total_pages, "latest_page_")
+                
+                # Определяем, как отправить сообщение
+                if update.callback_query:
+                    await update.callback_query.edit_message_text(
+                        "\n".join(response_lines).strip(),
+                        parse_mode="Markdown",
+                        disable_web_page_preview=True,
+                        reply_markup=keyboard,
+                    )
+                else:
+                    await self._reply_or_send(
+                        update,
+                        "\n".join(response_lines).strip(),
+                        parse_mode="Markdown",
+                        disable_web_page_preview=True,
+                        reply_markup=keyboard,
+                    )
             else:
                 await self._reply_or_send(
                     update,
@@ -294,7 +343,17 @@ class NakedCapBot:
         if query.data == "check_articles":
             await self.check_articles(update, context)
         elif query.data == "latest_articles":
-            await self.latest_articles(update, context)
+            await self.latest_articles(update, context, page=0)
+        elif query.data.startswith("latest_page_"):
+            # Обработка переключения страниц
+            try:
+                page = int(query.data.split("_")[2])
+                await self.latest_articles(update, context, page=page)
+            except (ValueError, IndexError):
+                await query.answer("Ошибка переключения страницы", show_alert=True)
+        elif query.data == "page_info":
+            # Просто ответ на нажатие индикатора страницы (ничего не делаем)
+            pass
         elif query.data == "search_articles":
             await query.edit_message_text(
                 self._search_help_text(),
