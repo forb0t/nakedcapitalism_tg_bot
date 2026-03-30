@@ -2,18 +2,29 @@
 Мониторинг новых статей с сайта Naked Capitalism
 """
 
-import requests
-import time
+import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+import os
 import sqlite3
-import hashlib
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
+
+
+def _data_dir() -> Path:
+    path = Path(os.environ.get("NAKEDCAP_DATA_DIR", ".")).resolve()
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
 
 class NakedCapitalismMonitor:
     def __init__(self):
+        self._data_dir = _data_dir()
         self.base_url = "https://www.nakedcapitalism.com/"
         self.session = requests.Session()
         self.session.headers.update({
@@ -24,11 +35,12 @@ class NakedCapitalismMonitor:
     
     def setup_logging(self):
         """Настройка логирования"""
+        log_path = self._data_dir / "nakedcap_monitor.log"
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler('nakedcap_monitor.log', encoding='utf-8'),
+                logging.FileHandler(log_path, encoding='utf-8'),
                 logging.StreamHandler()
             ]
         )
@@ -36,7 +48,7 @@ class NakedCapitalismMonitor:
     
     def setup_database(self):
         """Создание базы данных для хранения статей"""
-        self.conn = sqlite3.connect('articles.db')
+        self.conn = sqlite3.connect(str(self._data_dir / "articles.db"))
         cursor = self.conn.cursor()
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS articles (

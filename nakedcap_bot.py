@@ -427,8 +427,8 @@ def main():
         print("📝 Подсказка:")
         print("1. Найдите @BotFather в Telegram")
         print("2. Получите токен вашего бота")
-        print("3. Создайте файл @token.py рядом с nakedcap_bot.py")
-        print('4. Добавьте строку вида bot_token = "ВАШ_ТОКЕН"')
+        print("3. Задайте TELEGRAM_BOT_TOKEN в окружении (Docker / .env) или")
+        print("4. Создайте @token.py рядом с nakedcap_bot.py с bot_token = \"...\"")
         return
     except Exception as exc:  # pragma: no cover
         print(f"❌ Непредвиденная ошибка конфигурации: {exc}")

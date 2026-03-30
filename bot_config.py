@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -91,7 +92,17 @@ def get_token(
 
 
 def get_bot_token() -> str:
-    """Получить Telegram токен бота."""
+    """
+    Получить Telegram токен бота.
+
+    Сначала проверяются переменные окружения TELEGRAM_BOT_TOKEN или BOT_TOKEN,
+    затем переменная bot_token в @token.py (локальная разработка).
+    """
+    env_val = _normalize_token(os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN"))
+    if env_val:
+        if env_val == "YOUR_BOT_TOKEN_HERE":
+            raise ConfigError("TELEGRAM_BOT_TOKEN не должен быть плейсхолдером.")
+        return env_val
     return get_token("bot_token", placeholder="YOUR_BOT_TOKEN_HERE", required=True)
 
 

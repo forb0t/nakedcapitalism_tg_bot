@@ -1,0 +1,17 @@
+# Запуск: скопируйте .env.example в .env, задайте TELEGRAM_BOT_TOKEN, затем:
+#   docker compose up -d --build
+# В CasaOS: Custom Install → укажите этот каталог как compose-проект или соберите образ вручную.
+
+services:
+  nakedcap-bot:
+    build: .
+    container_name: nakedcap-bot
+    restart: unless-stopped
+    environment:
+      NAKEDCAP_DATA_DIR: /data
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set TELEGRAM_BOT_TOKEN in .env (see .env.example)}
+    volumes:
+      - nakedcap_data:/data
+
+volumes:
+  nakedcap_data:
