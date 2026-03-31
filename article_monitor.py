@@ -27,6 +27,7 @@ class NakedCapitalismMonitor:
         self._data_dir = _data_dir()
         self.base_url = "https://www.nakedcapitalism.com/"
         self.session = requests.Session()
+        self.session.trust_env = True
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })

@@ -3,3 +3,5 @@ requests==2.32.5
 beautifulsoup4==4.14.2
 lxml==4.9.3
 schedule==1.2.2
+PySocks==1.7.1
+socksio==1.0.0
