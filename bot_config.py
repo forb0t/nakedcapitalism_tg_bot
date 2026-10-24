@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import os
+import re
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Any, Optional
 
 __all__ = [
     "get_bot_token",
+    "get_admin_ids",
+    "get_check_interval",
+    "get_timezone",
     "get_setting",
     "get_bool",
 ]
+
+logger = logging.getLogger(__name__)
 
 _TOKEN_MODULE_CACHE: Optional[Any] = None
 
@@ -104,6 +112,44 @@ def get_bot_token() -> str:
             raise ConfigError("TELEGRAM_BOT_TOKEN не должен быть плейсхолдером.")
         return env_val
     return get_token("bot_token", placeholder="YOUR_BOT_TOKEN_HERE", required=True)
+
+
+def get_admin_ids() -> set[int]:
+    """
+    Telegram ID администраторов — только они могут добавлять и удалять ленты.
+
+    ADMIN_IDS в окружении (через запятую) или admin_ids в @token.py.
+    """
+    raw = os.environ.get("ADMIN_IDS")
+    if raw is None:
+        raw = get_setting("admin_ids", "")
+    items = raw if isinstance(raw, (list, tuple, set)) else re.split(r"[,;\s]+", str(raw))
+
+    ids = set()
+    for item in items:
+        try:
+            ids.add(int(str(item).strip()))
+        except ValueError:
+            continue
+    return ids
+
+
+def get_check_interval() -> int:
+    """Интервал проверки лент в минутах (CHECK_INTERVAL_MINUTES, не меньше 5)."""
+    try:
+        return max(5, int(os.environ.get("CHECK_INTERVAL_MINUTES", "60")))
+    except ValueError:
+        return 60
+
+
+def get_timezone() -> ZoneInfo:
+    """Часовой пояс для показа времени статей (BOT_TIMEZONE, по умолчанию Europe/Moscow)."""
+    name = os.environ.get("BOT_TIMEZONE", "Europe/Moscow").strip()
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning("Неизвестный часовой пояс %r, использую UTC", name)
+        return ZoneInfo("UTC")
 
 
 def get_bool(name: str, default: bool = False) -> bool:
