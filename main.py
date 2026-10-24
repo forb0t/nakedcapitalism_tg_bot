@@ -1,6 +1,6 @@
-"""Entry point compatibility wrapper."""
+"""Точка входа: python main.py"""
 
-from nakedcap_bot import main  # noqa: F401,F403
+from bot import main
 
 if __name__ == "__main__":
     main()
